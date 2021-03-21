@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect, useRef, useReducer} from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,10 +7,13 @@ import {
   Dimensions,
   Image,
   TouchableOpacity,
+  Easing
 } from 'react-native';
 
 import Box from '../components/boxComponent';
-import Modal from '../components/alert';
+import Modal from '../components/alertComponent';
+
+
 const {width, height} = Dimensions.get('screen');
 const limitHeight = height / 2 - 60;
 const Colors = [
@@ -24,18 +27,31 @@ const Colors = [
 ];
 const Home = () => {
   const [boxs, setBoxs] = useState([]);
-  const [level, setLevel] = useState(1);
-  const [showButton, setshowButton] = useState(true);
+  const [score, setScore] = useState(1);
+  const [showButton, setshowButton] = useState(true);  
   const [valueX, setValueX] = useState(new Animated.Value(0))
-  
-  useEffect(async () => {       
-    getData()
+  const [passAll, setPassAll] = useState(false)
+  const [visible, setVisible] = useState(false)
+  const refPassAll = useRef(passAll)
+  refPassAll.current = passAll
+
+  useEffect(() => {    
+    getData();
   }, []);
 
+  useEffect(() => {    
+    showBoxs();    
+  }, [boxs])
+
+  useEffect(() => {    
+ progressBarAnimation();    
+  }, [])
+ 
+
   async function getData() {
+    setPassAll(false)
     const data = await createBoxs(3);
     setBoxs(data);
-    console.log(boxs);
   }
   const ranY = () => {
     return (
@@ -57,12 +73,12 @@ const Home = () => {
   };
 
   const ok = (newBox, box) => {
-    if (box + 42 < newBox - 42) return true;
-    if (box - 42 > newBox + 42) return true;
+    if (box + 36 < newBox - 36) return true;
+    if (box - 36 > newBox + 36) return true;
     return false;
   };
 
-  const createBoxs = async (limmitNum) => {
+  const createBoxs = async limmitNum => {
     setBoxs([]);
     let X, Y;
     const boxsTemp = [];
@@ -71,7 +87,7 @@ const Home = () => {
       X: ranX(),
       Y: ranY(),
       color: ranColor(),
-      number: Math.floor(Math.random()* (1000) ),
+      number: Math.floor(Math.random() * 1000),
       scale: new Animated.Value(0),
     });
     for (var i = 1; i < limmitNum; i++) {
@@ -90,7 +106,7 @@ const Home = () => {
         X,
         Y,
         color: ranColor(),
-        number: Math.floor(Math.random()* (1000) ),
+        number: Math.floor(Math.random() * 1000),
         scale: new Animated.Value(0),
       });
     }
@@ -98,83 +114,101 @@ const Home = () => {
   };
 
   const showAnimation = scale => {
-    Animated.spring(scale, {
+    Animated.timing(scale, {
       toValue: 1,
-      friction: 3,
+      duration: 500,
       useNativeDriver: true,
+      
+      easing: Easing.bounce
     }).start();
   };
 
-  const isStupid = num => {
+  const isStupid =  box => {
     for (var i = 0; i < boxs.length; i++) {
-      if (num > boxs[i].number) {        
+      if (box.number > boxs[i].number) {
         return true;
       }
-    }
-    console.log('false')
-    setBoxs(
-      boxs.filter(box=>box.number !== num)
-    )          
-   
-    return false;
+    }    
+    hideBox(box)
     
+    return false;
   };
 
-  const hideAnimation = async (scale) => {
-    Animated.spring(scale, {
+  const hideBox = box => {
+    Animated.timing(box.scale, {
       toValue: 0,
-      friction: 9,
-      useNativeDriver: true,
+      duration: 50,
+      useNativeDriver: true,      
     }).start(() => {
-      
-    });
+      setBoxs(boxs.filter(b => b.X !== box.X));
+    })
   };
 
-  const checkOnPress = (number) => {    
-    if (isStupid(number)) {
-      Animated.timing(valueX).reset();
-      setValueX(new Animated.Value(0))
-      alert('fail');
-      setLevel(1);
-      setshowButton(true);
-      getData()
-     
-    }
-    else {
-      
-      if (boxs.length === 1) {
-        Animated.timing(valueX).stop();
-        setValueX(new Animated.Value(0))
-        setLevel(level + 1);
-        getData();
-        setshowButton(true)        
-      }
-      
-    }
+  const onPressContinue = () => {
+    
+    getData();
+    setScore(1);
+    setVisible(false);
+    progressBarAnimation()
+
   }
+
+  const onPressBox = async box => {    
+    if (isStupid(box)) {
+      Animated.timing(valueX).reset();
+     // setVisible(true)
+      //setScore(1);     
+      // getData();
+    } else {
+      if (boxs.length === 1) {        
+        setScore(score + 1);
+        await setPassAll(true)       
+        Animated.timing(valueX).reset();        
+        getData();       
+      }
+    }   
+
+  };
 
   const showBoxs = () => {
-    boxs.map(box => {
-      showAnimation(box.scale);
-    });
+    for (let i = 0; i < boxs.length; i++){
+      setTimeout(() => {
+         showAnimation(boxs[i].scale);
+      }, 100 * i);
+    }
+    
   };
+  const progressToZero = (calback) => {
+    Animated.timing(valueX, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,      
+    }).start(calback)
+  }
 
-  const progressBarStart = (timing) => {
+  const progressBarAnimation = () => {   
     Animated.timing(valueX, {
       toValue: -width,
-      duration: timing,
-      useNativeDriver: true
+      duration: 11000 - score * 1000,
+      useNativeDriver: true,      
     }).start(() => {
-      if (boxs.length > 0) {
-        alert('time limited');
-        setLevel(1);
-      setshowButton(true)}
-    })
-  }
+      if (refPassAll.current === false)
+      {
+        setVisible(true)
+        progressToZero()
+      } 
+      else {      
+       progressToZero(()=>progressBarAnimation())
+      }
+    })    
+  };
   return (
     <View style={styles.container}>
-       <Image style={{ width: width , height: height , position:'absolute', top: 0}} source={require('../src/assets/images/bg.jpg')} />
-      <Modal visible={false} score={ 9 }/>
+      <Image
+        style={styles.imageBackground}
+        source={require('../src/assets/images/bg.jpg')}
+      />
+      <Modal visible = {visible} score={score} onPress = {()=>onPressContinue()} />
       {boxs.map(box => {
         return (
           <Box
@@ -184,29 +218,16 @@ const Home = () => {
             color={box.color}
             number={box.number}
             scale={box.scale}
-            onPress={() => {             
-              hideAnimation(box.scale, box.number)
-              checkOnPress(box.number);
+            onPress={() => {              
+            onPressBox(box);             
             }}
           />
         );
       })}
-      {showButton ?  <TouchableOpacity
-        onPress={() => {
-          setshowButton(false)
-          showBoxs();
-          progressBarStart(11000 - level* 1000)
-        }}
-        style={styles.button}
-      >
-       <Text style = {styles.textButton} >{ level === 1 ? 'Play' : 'continue'}</Text>
-      </TouchableOpacity>: null }
-      <View style={styles.background}>
-        <Text style={styles.textLevel}>
-          {level}
-        </Text>
-      </View>
-  <Animated.View style = {[styles.progressBar, { transform: [{translateX: valueX}] }]} />
+        <Text style={styles.textScore}>{score}</Text>     
+      <Animated.View
+        style={[styles.progressBar, {transform: [{translateX: valueX}]}]}
+      />
     </View>
   );
 };
@@ -231,10 +252,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  textLevel: {
-    color: 'red', fontSize: 120, fontWeight: 'bold'
+  textScore: {
+    color: 'red',
+    fontSize: 28,
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    fontFamily: 'PermanentMarker'
   },
-  button:{
+  button: {
     width: 100,
     height: 50,
     backgroundColor: 'tomato',
@@ -243,21 +269,26 @@ const styles = StyleSheet.create({
     bottom: 10,
     alignSelf: 'center',
     alignItems: 'center',
-    justifyContent:'center'
+    justifyContent: 'center',
   },
   textButton: {
     fontSize: 18,
-    color: '#fff',
-    fontWeight:'bold'
+    color: '#fff',    
+    fontFamily: 'PermanentMarker'
   },
   progressBar: {
     width: width,
     height: 10,
     backgroundColor: 'tomato',
     position: 'absolute',
-    top: 0
-  }
+    top: 0,
+  },
+  imageBackground: {
+    width: width,
+    height: height,
+    position: 'absolute',
+    top: 0,
+  },
 });
 
 export default Home;
-

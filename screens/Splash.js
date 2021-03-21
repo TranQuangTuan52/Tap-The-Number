@@ -6,9 +6,10 @@ import {
   Animated,
   TouchableOpacity,
   Dimensions,
+  Easing,
   Image,
 } from 'react-native';
-import { useNavigation } from "@react-navigation/native";
+import {useNavigation} from '@react-navigation/native';
 import Button from '../components/button';
 import Box from '../components/boxSplash';
 const Colors = [
@@ -25,24 +26,25 @@ const Splash = () => {
   React.useEffect(() => {
     containerAnimation();
   }, []);
-  
+
   const navigation = useNavigation();
   const scaleValue = useRef(new Animated.Value(1)).current;
   const xHeader = useRef(new Animated.Value(width / 2 + 100)).current;
   const yHeader = useRef(new Animated.Value(0 + 120)).current;
   const yButton = useRef(new Animated.Value(height / 2 - 300)).current;
-  const fadeValue = useRef(new Animated.Value(0.5)).current;
+  const fadeValue = useRef(new Animated.Value(0)).current;
   const [boxColor, setBoxColor] = useState(Colors[0]);
   const [boxNumber, setboxNumber] = useState(1);
   const rotateValue = useRef(new Animated.Value(0)).current;
 
   const containerAnimation = () => {
     Animated.sequence([
-      //translateX 
+      //translateX
       Animated.timing(xHeader, {
         toValue: 0,
         duration: 500,
         useNativeDriver: true,
+        easing: Easing.bounce
       }),
       Animated.parallel([
         // translateY Header
@@ -50,12 +52,14 @@ const Splash = () => {
           toValue: -height / 2 + 300,
           timing: 500,
           useNativeDriver: true,
+          easing: Easing.bounce
         }),
         // translateX button playGame
         Animated.timing(yButton, {
           toValue: height / 2 - 400,
           timing: 500,
           useNativeDriver: true,
+          easing: Easing.bounce
         }),
         // opacity button playGame
         Animated.timing(fadeValue, {
@@ -68,7 +72,7 @@ const Splash = () => {
       Animated.sequence([
         Animated.timing(rotateValue, {
           toValue: 360,
-          duration: 2000,          
+          duration: 2000,
           useNativeDriver: true,
         }),
         Animated.timing(rotateValue, {
@@ -82,8 +86,7 @@ const Splash = () => {
       for (let i = 1; i < 11; i++) {
         setTimeout(() => {
           boxAnimation();
-          setboxNumber(i);
-          console.log(i);
+          setboxNumber(i);          
         }, i * 800);
       }
     });
@@ -134,7 +137,9 @@ const Splash = () => {
       </Animated.View>
       <View>
         <Button
-          onPress={() => {navigation.navigate('Home')}}
+          onPress={() => {
+            navigation.navigate('Home');
+          }}
           opacity={fadeValue}
           width={200}
           height={50}
@@ -168,7 +173,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-    background: {
-        width: width, height: height, position: 'absolute', top: 0
-    },
+  background: {
+    width: width,
+    height: height,
+    position: 'absolute',
+    top: 0,
+  },
 });
+// import React, {useState} from 'react'
+// import { View, Text, Animated, Button } from 'react-native'
+// const [state, setstate] = useState(initialState)
+// const Splash = () => {
+  
+//   return (
+//     <View>
+//       <Button  />
+//     </View>
+//   )
+// }
+
+// export default Splash
